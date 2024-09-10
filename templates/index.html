@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Explorer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <style>
+        body,
+        html {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            background-color: #1e1e1e;
+            color: #ffffff;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .toolbar {
+            background-color: #2d2d2d;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .square {
+            aspect-ratio: 1;
+        }
+
+        .toolbar>* {
+            height: calc(100% - 8px);
+            box-sizing: border-box;
+        }
+
+        .toolbar button {
+            background-color: #3a3a3a;
+            border: none;
+            color: #ffffff;
+            padding: 5px 10px;
+            margin: 2px;
+            cursor: pointer;
+        }
+
+        .address-bar {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            background-color: #3a3a3a;
+            padding: 5px 12px;
+            margin: 5px;
+            height: 30px;
+            min-height: unset;
+            flex-grow: unset;
+            margin: 0;
+        }
+
+        .breadcrumb {
+            display: flex;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            flex-wrap: wrap;
+        }
+
+        .breadcrumb li {
+            display: flex;
+            align-items: center;
+        }
+
+        .breadcrumb li:not(:last-child)::after {
+            content: '>';
+            margin: 0 5px;
+            color: #888;
+        }
+
+        .breadcrumb a {
+            color: #ffffff;
+            text-decoration: none;
+        }
+
+        .search-bar {
+            display: flex;
+            align-items: center;
+            background-color: #3a3a3a;
+            padding: 5px;
+            margin: 5px;
+        }
+
+        .search-bar input {
+            /* background-color: #1e1e1e; */
+            background-color: transparent;
+            border: none;
+            color: #ffffff;
+            padding: 5px;
+        }
+
+        .file-list {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .file-list.grid {
+            /* display: grid; */
+            /* grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); */
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .file-item {
+            background-color: #2d2d2d;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+        }
+
+        .file-list.grid .file-item input[type="checkbox"] {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .file-list.grid .file-item i {
+            margin: 0;
+            font-size: 35px;
+        }
+
+        .file-list.grid .file-item .name {
+            text-overflow: ellipsis;
+            max-width: 110px;
+            overflow: hidden;
+        }
+
+        .file-list.grid .file-item .details {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .file-list.grid .file-item {
+            position: relative;
+            flex-direction: column;
+            width: 120px;
+            height: 120px;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            text-align: center;
+            /* white-space: nowrap; */
+        }
+
+        .file-list.list .file-item {
+            display: flex;
+            align-items: center;
+            padding: 5px 10px;
+        }
+
+        .file-list.list {
+            gap: 10px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .file-item.selected {
+            background-color: #0078d4;
+        }
+
+        .file-item input[type="checkbox"] {
+            margin-right: 10px;
+        }
+
+        .file-item i {
+            font-size: 24px;
+            margin-right: 10px;
+        }
+
+        .file-item .details {
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+        }
+
+        .file-item .name {
+            font-weight: bold;
+        }
+
+        .file-item .info {
+            font-size: 0.8em;
+            color: #888;
+        }
+
+        .status-bar {
+            background-color: #2d2d2d;
+            padding: 5px 10px;
+            font-size: 0.9em;
+        }
+
+        #image-viewer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        #image-viewer img {
+            max-width: 90%;
+            max-height: 80%;
+            object-fit: contain;
+        }
+
+        #image-viewer .controls {
+            position: absolute;
+            bottom: 20px;
+            display: flex;
+            justify-content: center;
+            width: 100%;
+            z-index: 1001;
+        }
+
+        #image-viewer button {
+            background-color: #3a3a3a;
+            border: none;
+            color: #ffffff;
+            padding: 10px 15px;
+            margin: 0 5px;
+            cursor: pointer;
+        }
+
+        #image-name {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 5px 10px;
+            border-radius: 5px;
+            z-index: 1001;
+        }
+
+        .select {
+            position: relative;
+            display: inline-block;
+            /* margin-bottom: 15px; */
+            /* width: 100%; */
+            min-width: 150px;
+        }
+
+        .select select {
+            font-family: 'Arial';
+            display: inline-block;
+            width: 100%;
+            cursor: pointer;
+            padding: 10px 15px;
+            outline: 0;
+            border: 0px solid #000000;
+            border-radius: 0px;
+            background: #3a3a3a;
+            color: white;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            height: 100%;
+        }
+
+        .select select::-ms-expand {
+            display: none;
+        }
+
+        .select select:hover,
+        .select select:focus {
+            color: white;
+            background: #464545;
+        }
+
+        .select select:disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .select_arrow {
+            position: absolute;
+            top: 16px;
+            right: 15px;
+            pointer-events: none;
+            border-style: solid;
+            border-width: 8px 5px 0px 5px;
+            border-color: #7b7b7b transparent transparent transparent;
+        }
+
+        .select select:hover~.select_arrow,
+        .select select:focus~.select_arrow {
+            border-top-color: #000000;
+        }
+
+        .select select:disabled~.select_arrow {
+            border-top-color: #cccccc;
+        }
+
+        .spacer {
+            flex-grow: 1;
+        }
+
+        @media (max-width: 768px) {
+            .toolbar {
+                /* flex-direction: column; */
+                align-items: stretch;
+                height: 155px;
+            }
+            .address-bar{
+                height: auto;
+                padding: 10px 20px;
+                order: 2;
+            }
+            .status-bar{
+                order: 3;
+            }
+
+
+            .select,
+            .search-bar {
+                width: 100%;
+                height: 50px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin: 0;
+            }
+
+            .select {
+                margin-bottom: 2px;
+            }
+
+            .spacer {
+                height: 20px;
+            }
+
+            .file-list.grid {
+                grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            }
+
+            .toolbar button {
+                height: 40px;
+            }
+            .file-list.grid{
+                align-content: flex-start;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="address-bar">
+            <ul class="breadcrumb" id="breadcrumb"></ul>
+        </div>
+        <div class="toolbar">
+            <button id="back-btn" class="square"><i class="fas fa-arrow-left"></i></button>
+            <button id="upload-btn" class="square"><i class="fas fa-upload"></i></button>
+            <button id="delete-btn" class="square"><i class="fas fa-trash"></i></button>
+            <button id="download-btn" class="square"><i class="fas fa-download"></i></button>
+            <div class="spacer"></div>
+            <button id="grid-view-btn" class="square"><i class="fas fa-th"></i></button>
+            <button id="list-view-btn" class="square"><i class="fas fa-list"></i></button>
+            <div class="select">
+                <select id="sort-select">
+                    <option value="name">Sort by Name</option>
+                    <option value="date">Sort by Date</option>
+                    <option value="type">Sort by Type</option>
+                    <option value="size">Sort by Size</option>
+                </select>
+                <div class="select_arrow">
+                </div>
+            </div>
+            <div class="search-bar">
+                <input type="text" id="search-input" placeholder="Search files...">
+                <button id="search-btn"><i class="fas fa-search"></i></button>
+            </div>
+        </div>
+        <div id="file-list" class="file-list grid"></div>
+        <div class="status-bar" id="status-bar"></div>
+    </div>
+
+    <div id="image-viewer">
+        <div id="image-name"></div>
+        <img id="viewer-image" src="" alt="Preview">
+        <div class="controls">
+            <button id="prev-image"><i class="fas fa-chevron-left"></i> Previous</button>
+            <button id="next-image">Next <i class="fas fa-chevron-right"></i></button>
+            <button id="zoom-in"><i class="fas fa-search-plus"></i> Zoom In</button>
+            <button id="zoom-out"><i class="fas fa-search-minus"></i> Zoom Out</button>
+            <button id="close-viewer"><i class="fas fa-times"></i> Close</button>
+        </div>
+    </div>
+
+    <input type="file" id="file-upload" hidden multiple>
+
+    <script>
+        let currentPath = '';
+        let currentView = 'grid';
+        let selectedFiles = new Set();
+        let currentImages = [];
+        let currentImageIndex = 0;
+        let fileList = [];
+
+        function loadFiles(path = '') {
+            fetch(`/files?path=${path}`)
+                .then(response => response.json())
+                .then(data => {
+                    currentPath = path;
+                    fileList = data;
+                    updateBreadcrumb(path);
+                    renderFileList();
+                    updateStatusBar(data.length);
+                });
+        }
+
+        function renderFileList() {
+            const fileListElement = document.getElementById('file-list');
+            fileListElement.innerHTML = '';
+            fileList.forEach(item => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                fileItem.innerHTML = `
+                    <input type="checkbox">
+                    <i class="${getItemIcon(item)}"></i>
+                    <div class="details">
+                        <span class="name">${item.name}</span>
+                        <span class="info">${item.size || ''} - ${item.date || ''}</span>
+                    </div>
+                `;
+                fileItem.onclick = (e) => handleItemClick(e, item);
+                fileItem.ondblclick = () => handleItemDoubleClick(item);
+                addDoubleTouchListener(fileItem, () => handleItemDoubleClick(item));
+                fileListElement.appendChild(fileItem);
+            });
+        }
+
+        function updateBreadcrumb(path) {
+            const parts = path.split('/').filter(Boolean);
+            const breadcrumb = document.getElementById('breadcrumb');
+            breadcrumb.innerHTML = '<li><a href="#" data-path=""><i class="fas fa-home"></i> Root</a></li>';
+            let currentPath = '';
+            parts.forEach(part => {
+                currentPath += '/' + part;
+                breadcrumb.innerHTML += `<li><a href="#" data-path="${currentPath}">${part}</a></li>`;
+            });
+            breadcrumb.querySelectorAll('a').forEach(link => {
+                link.onclick = (e) => {
+                    e.preventDefault();
+                    loadFiles(e.target.dataset.path);
+                };
+            });
+        }
+
+        function handleItemClick(e, item) {
+            if (e.target.type === 'checkbox') {
+                e.target.checked ? selectedFiles.add(item.name) : selectedFiles.delete(item.name);
+            } else {
+                const checkbox = e.currentTarget.querySelector('input[type="checkbox"]');
+                checkbox.checked = !checkbox.checked;
+                e.currentTarget.classList.toggle('selected');
+                checkbox.checked ? selectedFiles.add(item.name) : selectedFiles.delete(item.name);
+            }
+            updateStatusBar();
+        }
+
+        function handleItemDoubleClick(item) {
+            if (item.is_dir) {
+                loadFiles(currentPath ? `${currentPath}/${item.name}` : item.name);
+            } else if (item.type && item.type.startsWith('image/')) {
+                openImageViewer(item);
+            }
+        }
+
+        function openImageViewer(item) {
+            const viewer = document.getElementById('image-viewer');
+            const img = document.getElementById('viewer-image');
+            const nameElement = document.getElementById('image-name');
+
+            currentImages = fileList.filter(file => file.type && file.type.startsWith('image/')).map(file => file.name);
+            currentImageIndex = currentImages.indexOf(item.name);
+
+            img.src = `/download?path=${currentPath}/${item.name}`;
+            nameElement.textContent = item.name;
+            viewer.style.display = 'flex';
+
+            updateImageControls();
+        }
+
+        function updateImageControls() {
+            document.getElementById('prev-image').disabled = currentImageIndex === 0;
+            document.getElementById('next-image').disabled = currentImageIndex === currentImages.length - 1;
+        }
+
+        document.getElementById('prev-image').onclick = () => {
+            if (currentImageIndex > 0) {
+                currentImageIndex--;
+                const newImage = currentImages[currentImageIndex];
+                document.getElementById('viewer-image').src = `/download?path=${currentPath}/${newImage}`;
+                document.getElementById('image-name').textContent = newImage;
+                updateImageControls();
+            }
+        };
+
+        document.getElementById('next-image').onclick = () => {
+            if (currentImageIndex < currentImages.length - 1) {
+                currentImageIndex++;
+                const newImage = currentImages[currentImageIndex];
+                document.getElementById('viewer-image').src = `/download?path=${currentPath}/${newImage}`;
+                document.getElementById('image-name').textContent = newImage;
+                updateImageControls();
+            }
+        };
+
+        document.getElementById('close-viewer').onclick = () => {
+            document.getElementById('image-viewer').style.display = 'none';
+        };
+
+        let currentZoom = 1;
+        document.getElementById('zoom-in').onclick = () => {
+            currentZoom *= 1.2;
+            document.getElementById('viewer-image').style.transform = `scale(${currentZoom})`;
+        };
+
+        document.getElementById('zoom-out').onclick = () => {
+            currentZoom /= 1.2;
+            document.getElementById('viewer-image').style.transform = `scale(${currentZoom})`;
+        };
+
+        document.addEventListener('keydown', (e) => {
+            if (document.getElementById('image-viewer').style.display === 'flex') {
+                if (e.key === 'ArrowLeft') document.getElementById('prev-image').click();
+                if (e.key === 'ArrowRight') document.getElementById('next-image').click();
+                if (e.key === 'Escape') document.getElementById('close-viewer').click();
+            }
+        });
+
+        function getItemIcon(item) {
+            if (item.is_dir) return 'fas fa-folder';
+            if (item.type && item.type.startsWith('image/')) return 'fas fa-image';
+            if (item.type && item.type.startsWith('video/')) return 'fas fa-video';
+            if (item.type && item.type === 'text/plain') return 'fas fa-file-alt';
+            return 'fas fa-file';
+        }
+
+        document.getElementById('back-btn').onclick = () => {
+            if (currentPath) {
+                const parts = currentPath.split('/');
+                parts.pop();
+                loadFiles(parts.join('/'));
+            }
+        };
+
+        document.getElementById('upload-btn').onclick = () => {
+            document.getElementById('file-upload').click();
+        };
+
+        document.getElementById('file-upload').onchange = (e) => {
+            const files = e.target.files;
+            const formData = new FormData();
+            for (let file of files) {
+                formData.append('files', file);
+            }
+            formData.append('path', currentPath);
+
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.message);
+                    loadFiles(currentPath);
+                })
+                .catch(error => console.error('Error:', error));
+        };
+
+        document.getElementById('delete-btn').onclick = () => {
+            if (selectedFiles.size === 0) {
+                alert('Please select files to delete.');
+                return;
+            }
+            if (confirm(`Are you sure you want to delete ${selectedFiles.size} item(s)?`)) {
+                const formData = new FormData();
+                formData.append('path', currentPath);
+                formData.append('files', JSON.stringify(Array.from(selectedFiles)));
+
+                fetch('/delete', {
+                    method: 'POST',
+                    body: formData
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        alert(data.message);
+                        selectedFiles.clear();
+                        loadFiles(currentPath);
+                    })
+                    .catch(error => console.error('Error:', error));
+            }
+        };
+
+        document.getElementById('download-btn').onclick = () => {
+            if (selectedFiles.size === 0) {
+                alert('Please select files to download.');
+                return;
+            }
+            selectedFiles.forEach(file => {
+                window.open(`/download?path=${currentPath}/${file}`, '_blank');
+            });
+        };
+
+        document.getElementById('grid-view-btn').onclick = () => changeView('grid');
+        document.getElementById('list-view-btn').onclick = () => changeView('list');
+
+        function changeView(view) {
+            currentView = view;
+            const fileList = document.getElementById('file-list');
+            fileList.className = `file-list ${view}`;
+        }
+
+        document.getElementById('sort-select').onchange = (e) => {
+            const sortBy = e.target.value;
+            fileList.sort((a, b) => {
+                if (sortBy === 'name') return a.name.localeCompare(b.name);
+                if (sortBy === 'date') return new Date(b.date) - new Date(a.date);
+                if (sortBy === 'type') return a.type.localeCompare(b.type);
+                if (sortBy === 'size') return parseFloat(b.size) - parseFloat(a.size);
+            });
+            renderFileList();
+        };
+
+        document.getElementById('search-btn').onclick = () => {
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            const filteredFiles = fileList.filter(file =>
+                file.name.toLowerCase().includes(searchTerm)
+            );
+            renderFilteredFileList(filteredFiles);
+        };
+
+        document.getElementById('search-input').onkeyup = (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('search-btn').click();
+            }
+        };
+
+        function renderFilteredFileList(filteredFiles) {
+            const fileListElement = document.getElementById('file-list');
+            fileListElement.innerHTML = '';
+            filteredFiles.forEach(item => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                fileItem.innerHTML = `
+                    <input type="checkbox">
+                    <i class="${getItemIcon(item)}"></i>
+                    <div class="details">
+                        <span class="name">${item.name}</span>
+                        <span class="info">${item.size || ''} - ${item.date || ''}</span>
+                    </div>
+                `;
+                fileItem.onclick = (e) => handleItemClick(e, item);
+                fileItem.ondblclick = () => handleItemDoubleClick(item);
+                fileListElement.appendChild(fileItem);
+            });
+            updateStatusBar(filteredFiles.length);
+        }
+
+        function updateStatusBar(totalItems) {
+            const statusBar = document.getElementById('status-bar');
+            statusBar.textContent = `${totalItems} item(s)${selectedFiles.size ? `, ${selectedFiles.size} selected` : ''}`;
+        }
+        function addDoubleTouchListener(element, callback) {
+            let lastTap = 0;
+            const DOUBLE_TAP_DELAY = 300; // milliseconds
+
+            element.addEventListener('touchend', function (e) {
+                const currentTime = new Date().getTime();
+                const tapLength = currentTime - lastTap;
+
+                if (tapLength < DOUBLE_TAP_DELAY && tapLength > 0) {
+                    e.preventDefault();
+                    callback(e);
+                }
+
+                lastTap = currentTime;
+            });
+        }
+
+        // Initial load
+        loadFiles();
+    </script>
+</body>
+
+</html>

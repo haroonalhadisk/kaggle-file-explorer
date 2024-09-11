@@ -9,7 +9,7 @@ import io
 app = Flask(__name__)
 
 # Configure this to your Stable Diffusion folder
-STABLE_DIFFUSION_FOLDER = '/kaggle/working/stable-diffusion-webui-forge/'
+STABLE_DIFFUSION_FOLDER = '/'
 
 @app.route('/')
 def index():
